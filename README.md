@@ -150,7 +150,7 @@ jadi --version
 
 | Requirement | Details |
 |-------------|---------|
-| **OS** | Linux x86_64 |
+| **OS** | Ubuntu 24.04+ / Debian 13+ / any Linux x86_64 with glibc 2.39+
 | **Disk** | ~12 MB binary + ~700 MB vulnerability database |
 | **Memory** | ~100 MB typical, ~500 MB for large scans |
 | **Network** | Required for `update-db`; `--offline` for air-gapped use |
