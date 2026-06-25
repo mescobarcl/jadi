@@ -2,7 +2,7 @@
 
 **Offline vulnerability scanner for mounted backups and live filesystems — with deep Microsoft Windows support**
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/mescobarcl/jadi/releases)
+[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/mescobarcl/jadi/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-linux%20x86__64-lightgrey.svg)](https://github.com/mescobarcl/jadi/releases)
 
@@ -13,9 +13,10 @@ Jadi analyzes mounted backup filesystems and live systems to detect installed so
 - **Windows offline analysis** — Scan Windows backups without booting them: registry hive parsing, KB/patch gap detection, MSRC advisory matching, .NET Framework versioning, supersedence chain resolution, and server role filtering (IIS, DNS, DHCP, Hyper-V, AD)
 - **12 ecosystem scanners** — npm, PyPI, Maven, Gradle, Go, NuGet, Composer, RubyGems, Cargo, .NET, JAR, and binary pattern detection
 - **5 vulnerability sources** — NVD, OSV, GHSA, MSRC, and CISA KEV (418,000+ vulnerabilities)
-- **7 output formats** — Table, JSON, SARIF, CSV, Markdown, SPDX, CycloneDX
+- **Authenticated database** — SHA-256 + optional ed25519 signature verification of the downloaded database (`JADI_REQUIRE_SIGNATURE` to enforce)
+- **7 output formats** — Table, JSON, SARIF, CSV, Markdown, SPDX, CycloneDX (with CVSS vector + CWE)
 - **KEV intelligence** — Known exploited vulnerabilities with ransomware association detection
-- **SBOM generation** — SPDX 2.3 and CycloneDX 1.5
+- **SBOM generation** — SPDX 2.3 and CycloneDX 1.5 (with vulnerabilities)
 - **CI/CD ready** — SARIF output, severity-based exit codes, suppression rules
 - **Offline capable** — Scan air-gapped systems with `--offline` flag
 
