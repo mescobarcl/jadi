@@ -45,13 +45,6 @@ usable by older scanners.
 - Deterministic ordering of grouped results and recommendations
 - CSV: fixed the `ecosystem`/`source` columns
 
-### Configuration & CI
-
-- `.jadi.toml` `[scan]` / `[output]` / `[database]` sections are now applied
-  (CLI flags still take precedence)
-- `--fail-on-severity` is evaluated before the `--min-severity` display filter, so
-  the CI gate is no longer silently narrowed
-
 ### Security
 
 - Patched bundled dependency advisories: `rustls-webpki` (CRL DoS + name-constraint
