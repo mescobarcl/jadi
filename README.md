@@ -1,24 +1,26 @@
 # Jadi Scanner
 
-**Offline vulnerability scanner for mounted backups and live filesystems — with deep Microsoft Windows support**
+**Offline vulnerability scanner for mounted Windows backups and live filesystems**
 
-[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/mescobarcl/jadi/releases)
+[![Version](https://img.shields.io/badge/version-0.6.4-blue.svg)](https://github.com/mescobarcl/jadi/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-linux%20x86__64-lightgrey.svg)](https://github.com/mescobarcl/jadi/releases)
 
-Jadi analyzes mounted backup filesystems and live systems to detect installed software, correlate it against multiple vulnerability databases, and generate compliance-ready reports. Built for IT security teams, MSPs, and backup administrators who need to assess the security posture of systems — including Windows servers and workstations — before or after restoration.
+Jadi analyzes mounted backup filesystems and live systems to detect installed software, correlate it against 12 vulnerability and threat-intelligence sources, and generate compliance-ready reports and SBOMs. Built for IT security teams, MSPs, and backup administrators who need to assess the security posture of Windows servers and workstations before or after restoration, without booting them.
 
 ## Key Features
 
-- **Windows offline analysis** — Scan Windows backups without booting them: registry hive parsing, KB/patch gap detection, MSRC advisory matching, .NET Framework versioning, supersedence chain resolution, and server role filtering (IIS, DNS, DHCP, Hyper-V, AD)
-- **12 ecosystem scanners** — npm, PyPI, Maven, Gradle, Go, NuGet, Composer, RubyGems, Cargo, .NET, JAR, and binary pattern detection
-- **5 vulnerability sources** — NVD, OSV, GHSA, MSRC, and CISA KEV (418,000+ vulnerabilities)
-- **Authenticated database** — SHA-256 + optional ed25519 signature verification of the downloaded database (`JADI_REQUIRE_SIGNATURE` to enforce)
-- **7 output formats** — Table, JSON, SARIF, CSV, Markdown, SPDX, CycloneDX (with CVSS vector + CWE)
-- **KEV intelligence** — Known exploited vulnerabilities with ransomware association detection
-- **SBOM generation** — SPDX 2.3 and CycloneDX 1.5 (with vulnerabilities)
-- **CI/CD ready** — SARIF output, severity-based exit codes, suppression rules
-- **Offline capable** — Scan air-gapped systems with `--offline` flag
+- **Windows offline analysis**: registry hive parsing, patch state from the installed build and UBR (validated against Windows Update), Monthly Rollups, MSRC matching, .NET Framework and .NET runtimes, SQL Server, Microsoft 365 Apps / Office Click-to-Run, Edge, Visual Studio and Store apps, server role filtering
+- **Vulnerable drivers (BYOVD)**: every kernel driver hashed and checked against loldrivers.io and Microsoft's vulnerable driver blocklist
+- **Exploitation intelligence**: CISA KEV, EPSS, CISA SSVC and Microsoft's exploitation status on every finding
+- **End of support**: unsupported Windows, SQL Server, Exchange, Office and .NET releases reported as findings
+- **12 ecosystem scanners**: npm, PyPI, Maven, Gradle, Go, NuGet, Composer, RubyGems, Cargo, .NET, JAR, and binary detection
+- **12 data sources**: 699,000+ vulnerabilities, rebuilt and signed daily
+- **Complete SBOM and re-matching**: CycloneDX with OS, KBs, drivers and stable purls; re-match a stored SBOM against today's data with `jadi match`, no backup needed
+- **Authenticated database**: SHA-256 plus a mandatory ed25519 signature over the whole update manifest
+- **7 output formats**: Table, JSON (Trivy-compatible), SARIF, CSV, Markdown, SPDX, CycloneDX
+- **CI/CD ready**: SARIF output, severity-based exit codes, suppression rules
+- **Offline capable**: scan air-gapped systems with `--offline` or `JADI_OFFLINE=1`
 
 ## Quick Start
 
@@ -35,83 +37,80 @@ jadi update-db
 # Scan a mounted backup
 jadi scan /mnt/backup
 
-# Generate JSON report
-jadi scan /mnt/backup -o json -f jadi-report.json
+# JSON report plus CycloneDX SBOM in one pass
+jadi scan /mnt/backup -o json -f jadi-report.json --sbom-file sbom.cdx.json
 ```
 
-## Sample Output (Windows Server 2022 — Real Scan)
+## Sample Output (Windows Server 2022, Real Scan)
+
+A Windows Server 2022 backup two years behind on updates, scanned with `--expand none`:
 
 ```
 ╔════════════════════════════════════════════════════════════════════════════╗
-║                    EXECUTIVE SUMMARY - Risk Level: HIGH                    ║
+║                  EXECUTIVE SUMMARY - Risk Level: CRITICAL                  ║
 ╠════════════════════════════════════════════════════════════════════════════╣
 ║  Risk Score: 10.0/10 [██████████████████████████████████████████████████]  ║
-║  Total: 83 vulnerabilities (C:0 H:69 M:13 L:1)                            ║
-║  KEV: 1 in catalog | 0 ransomware | 1 overdue                             ║
+║  Total: 5032 vulnerabilities (C:221 H:3537 M:1243 L:31)                    ║
+║  KEV: 49 in catalog | 3 ransomware | 47 overdue                            ║
 ╚════════════════════════════════════════════════════════════════════════════╝
 
 Detected System:
-  ✓ Windows Server 2022 Standard (Build 20348)
-  ✓ 20 Windows KBs installed
-  ✓ .NET Framework 4.8, 4.0, 3.5, 3.0, 2.0
+  ✓ Windows Server 2022 Standard (Build 20348.2582)
+  ✓ 2 Windows KBs installed
+  ✓ .NET Framework 4.8+ (528449)
 
-Detected 219 software components
+Detected 6 software components
 
-VULNERABILITIES BY COMPONENT (83 CVEs in 9 components)
+⚠ Scan notices:
+  → 22 low-confidence matches hidden (NVD entries without a version range); use --show-low-confidence to include them
 
-🟠 HIGH (81 CVEs in 8 components)
-├─ 📦 edge_chromium (microsoft) 144.0.3719.82 ─── 3 CVEs │ 1 KEV → >=145.0.3800.58
-│     🟠 CVE-2023-5217 CVSS:8.8 [KEV]
-│     🟠 CVE-2022-38012 CVSS:7.7
-├─ 📦 Windows Server 2022 Standard Build 20348 ─── 40 CVEs │ → KB5075906
-│     🟠 CVE-2026-25188 CVSS:8.8
-│     🟠 CVE-2026-23669 CVSS:8.8
-│     ... and 38 more CVEs
-├─ 📦 Microsoft SQL Server unknown [?] ─── 21 CVEs │
-├─ 📦 Microsoft Visual Studio 14.0 ─── 9 CVEs │
-├─ 📦 System.Private.Uri 4.3.0 ─── 3 CVEs │ → 4.3.2
-├─ 📦 System.Net.Http 4.3.0 ─── 1 CVEs │ → 4.3.4
-└─ 📦 WinRAR unknown [?] ─── 3 CVEs │
+VULNERABILITIES BY COMPONENT (5032 CVEs in 5 components)
+
+🔴 CRITICAL (4981 CVEs in 3 components)
+├─ 📦 Windows Server 2022 Standard Build 20348.2582 ─── 4183 CVEs │ 47 KEV → KB5041160
+├─ 📦 Microsoft Edge 155.0.4283.60 ─── 707 CVEs │ 1 KEV → >=156.0.4314.80
+└─ 📦 Google Chrome 157.0.8103.40 ─── 91 CVEs │ 1 KEV → >=157.0.8103.50
+
+🟠 HIGH (51 CVEs in 2 components)
+├─ 📦 .NET Framework on Windows S... .NET Framework 4.8+ (528449) ─── 50 CVEs │ → KB5044099
+└─ 📦 VMware Tools 12.4.0.23259341 ─── 1 CVEs │ → >=12.5.4
 
 SUMMARY BY SOURCE
-┌────────────┬──────────┬──────┬────────┬─────┬─────────┬───────┐
-│ Source     │ Critical │ High │ Medium │ Low │ Unknown │ Total │
-├────────────┼──────────┼──────┼────────┼─────┼─────────┼───────┤
-│ NVD (CPE)  │ 0        │ 30   │ 7      │ 1   │ 0       │ 38    │
-│ OSV (PURL) │ 0        │ 4    │ 1      │ 0   │ 0       │ 5     │
-│ MSRC (KB)  │ 0        │ 35   │ 5      │ 0   │ 0       │ 40    │
-└────────────┴──────────┴──────┴────────┴─────┴─────────┴───────┘
+┌──────────────────────┬──────────┬──────┬────────┬─────┬─────────┬───────┐
+│ Source               ┆ Critical ┆ High ┆ Medium ┆ Low ┆ Unknown ┆ Total │
+╞══════════════════════╪══════════╪══════╪════════╪═════╪═════════╪═══════╡
+│ NVD (CPE)            ┆ 8        ┆ 57   ┆ 19     ┆ 11  ┆ 0       ┆ 95    │
+│ MSRC (KB)            ┆ 213      ┆ 3480 ┆ 1224   ┆ 20  ┆ 0       ┆ 4937  │
+└──────────────────────┴──────────┴──────┴────────┴─────┴─────────┴───────┘
 
 ⚠ CISA KEV Catalog:
-  → 1 in KEV catalog (requires immediate action)
-  → 1 OVERDUE for remediation
-
-Recommended Actions:
-  1. Remediate edge_chromium (microsoft) 144.0.3719.82 (KEV) [1 KEV]
-  2. Install KB5078766 (fixes 22 CVEs)
-  3. Install KB5075906 (fixes 18 CVEs)
-  4. Upgrade System.Private.Uri to 4.3.2 (fixes 3 CVEs)
-  5. Upgrade System.Net.Http to 4.3.4 (fixes 1 CVEs)
+  → 49 in KEV catalog (requires immediate action)
+  → 3 associated with ransomware campaigns
+  → 47 OVERDUE for remediation
 ```
 
 > Components marked with `[?]` have low detection confidence (version unknown from filesystem detection).
 
 ## Windows & Microsoft Analysis
 
-Jadi is designed to scan Windows systems offline — mount a backup image and analyze it from Linux without booting Windows. This is a key differentiator over scanners that require a running OS.
+Jadi is designed to scan Windows systems offline: mount a backup image and analyze it from Linux without booting Windows. This is a key differentiator over scanners that require a running OS.
 
 ### What Jadi detects on Windows backups
 
 | Capability | Description |
 |------------|-------------|
-| **Installed software** | Parses `SOFTWARE` and `NTUSER.DAT` registry hives to enumerate all installed applications with versions |
-| **Missing KB patches** | Detects which Microsoft KBs are installed vs. missing, cross-referenced against MSRC advisories |
-| **Supersedence chains** | Understands that KB5034441 supersedes KB5031356 — avoids false positives from replaced patches |
-| **.NET Framework detection** | Detects exact .NET Framework versions (2.0–4.8) from registry, matches against framework-specific MSRC CVEs with KB validation |
-| **.NET Core / .NET 5+** | Detects modern .NET applications via `*.deps.json` and `*.csproj` files, matches NuGet packages against OSV/GHSA advisories |
-| **Server role filtering** | Identifies IIS, DNS, DHCP, Hyper-V, Active Directory roles — only reports CVEs relevant to installed roles |
-| **Windows noise filtering** | `--skip-windows-noise` excludes WinSxS, Installer, Temp, SoftwareDistribution and other high-volume directories |
-| **MSRC advisory matching** | 7,600+ Microsoft advisories with product-specific KB mapping |
+| **Installed software** | `SOFTWARE` and every profile's `NTUSER.DAT`, MSI registrations, portable and per-user apps (`AppData`, `Desktop`, `Downloads`), versions from the executable's version resource |
+| **Patch state** | Decides per CVE from the installed build and UBR, the Patch Tuesday it contains and the fixed build of that exact release; installed KBs and Monthly Rollups for older Windows. Only updates in state Installed count |
+| **Windows releases** | Server 2003 to Server 2025 and Windows 7 to Windows 11 26H2, each matched with its own MSRC rows |
+| **Microsoft 365 Apps / Office** | Click-to-Run build checked against the fixed build of its update channel; out-of-support version lines flagged |
+| **SQL Server 2016 to 2025** | Matched by build against Microsoft's fixed build for its servicing track (GDR or CU), with the KB to install |
+| **.NET** | .NET Framework versions from the registry, plus every .NET, ASP.NET Core and Desktop runtime; NuGet packages from `*.deps.json` and `*.csproj` |
+| **Edge, Visual Studio, Store apps** | Matched against Microsoft's fixes shipped without a KB |
+| **Kernel drivers** | Every `.sys` in `System32\drivers` and the driver store, hashed (SHA-256 and Authenticode) and checked against loldrivers.io and Microsoft's vulnerable driver blocklist |
+| **End of support** | `EOL-<product>-<release>` findings for unsupported Windows, SQL Server, Exchange, Office and .NET |
+| **Server role filtering** | IIS, DNS, DHCP, Hyper-V, Active Directory and more: only CVEs relevant to installed roles and enabled services |
+| **Hot backups** | Registry transaction logs (`.LOG1`/`.LOG2`) are replayed, so VSS and crash-consistent backups show current data |
+| **Unreadable files** | Files the mount cannot read (e.g. system-compressed files on ntfs-3g without its plugin) are counted and reported, not silently skipped |
 
 ### Example: Scan a Windows backup
 
@@ -122,7 +121,7 @@ sudo mount -o ro /dev/sdb1 /mnt/windows-backup
 # Scan with Windows noise filtering
 jadi scan /mnt/windows-backup --skip-windows-noise
 
-# Only show actively exploited Microsoft vulnerabilities
+# Only show actively exploited vulnerabilities
 jadi scan /mnt/windows-backup --kev-only --skip-windows-noise
 
 # Generate compliance report
@@ -151,61 +150,81 @@ jadi --version
 
 | Requirement | Details |
 |-------------|---------|
-| **OS** | Ubuntu 24.04+ / Debian 13+ / any Linux x86_64 with glibc 2.39+
-| **Disk** | ~12 MB binary + ~700 MB vulnerability database |
+| **OS** | Ubuntu 24.04+ / Debian 13+ / any Linux x86_64 with glibc 2.39+ |
+| **Disk** | ~14 MB binary + ~1.8 GB vulnerability database (~300 MB download) |
 | **Memory** | ~100 MB typical, ~500 MB for large scans |
 | **Network** | Required for `update-db`; `--offline` for air-gapped use |
 
 ## Commands
 
-### `update-db` — Download vulnerability database
+### `update-db`: Download vulnerability database
 
 ```bash
-jadi update-db          # Update if new version available
+jadi update-db          # Update if a new version is available
 jadi update-db --force  # Force re-download
 ```
 
-The database is updated daily and distributed via CDN (~110 MB compressed).
+The database is rebuilt and signed daily and distributed via CDN (~300 MB compressed).
 
-### `db-status` — Check database info
+### `db-status`: Check database info
 
 ```bash
 $ jadi db-status
 
 Vulnerability Database Status
 ------------------------------
-Version:     2026.03.22.2335
+Version:     2026.11.16.1401
 Location:    jadi.db
-Size:        670.2 MB
+Size:        1733.2 MB
 Age:         0 hours
 
 Database Contents:
-  KEV entries: 1551
-  Ransomware-associated: 313
-  Total vulnerabilities: 418558
+  KEV entries: 1781
+  Ransomware-associated: 361
+  Total vulnerabilities: 699239
+
+Exploitation, drivers and end of support:
+  EPSS: 406741
+  CISA SSVC: 219336
+  MSRC exploitation: 14760
+  Driver blocklist: 572
+  End of support: 140
 ```
 
-### `scan` — Scan for vulnerabilities
+### `scan`: Scan for vulnerabilities
 
 ```bash
 jadi scan /mnt/backup                                    # Basic scan
 jadi scan /mnt/backup -o json -f jadi-report.json        # JSON report
+jadi scan /mnt/backup --sbom-file sbom.cdx.json          # Also write the CycloneDX SBOM (same walk)
 jadi scan /mnt/backup --min-severity high                # Filter by severity
 jadi scan /mnt/backup --kev-only                         # Only actively exploited (CISA KEV)
 jadi scan /mnt/backup --ransomware-only                  # Only ransomware-associated
 jadi scan /mnt/backup -o sarif -f results.sarif          # SARIF for GitHub Security
-jadi scan /mnt/backup -o spdx -f sbom.spdx.json         # SBOM (SPDX)
-jadi scan /mnt/backup -o cyclonedx -f sbom.cdx.json     # SBOM (CycloneDX)
+jadi scan /mnt/backup -o spdx -f sbom.spdx.json          # SBOM (SPDX)
+jadi scan /mnt/backup -o cyclonedx -f sbom.cdx.json      # SBOM (CycloneDX)
 jadi scan /mnt/backup --fail-on-severity high            # CI mode: exit 2 if high+
 jadi scan /mnt/backup --expand all                       # Show all vulnerability details
 ```
 
-### `list-software` — Software inventory
+### `match`: Re-match a saved inventory
+
+Re-check a stored inventory against today's database, without the backup. Windows (build, KBs, drivers, roles) is re-matched too.
+
+```bash
+jadi match --sbom sbom.cdx.json                          # CycloneDX SBOM from scan
+jadi match --sbom jadi-report.json -o json               # A previous `scan -o json` report
+jadi match --sbom inventory.json --fail-on-severity high # Inventory from list-software
+```
+
+Same filters, formats, suppressions and exit codes as `scan`.
+
+### `list-software`: Software inventory
 
 ```bash
 jadi list-software /mnt/backup
 jadi list-software /mnt/backup --show-paths
-jadi list-software /mnt/backup -o json
+jadi list-software /mnt/backup -o json --inventory -f inventory.json   # Re-matchable inventory, no database needed
 ```
 
 ## Scan Options
@@ -214,7 +233,10 @@ jadi list-software /mnt/backup -o json
 |--------|-------------|---------|
 | `-o, --output` | Format: table, json, sarif, csv, markdown, spdx, cyclonedx | `table` |
 | `-f, --output-file` | Save output to file | stdout |
+| `--sbom-file` | Also write the CycloneDX SBOM of the same scan | none |
 | `--min-severity` | Minimum: critical, high, medium, low | `low` |
+| `--hide-unknown` | Also hide findings without a severity score | off |
+| `--show-low-confidence` | Include NVD matches that claim every version with no range | off |
 | `--only-ecosystem` | Single ecosystem (npm, maven, etc.) | all |
 | `--exclude-path` | Exclude paths (repeatable) | none |
 | `--max-depth` | Directory depth (1-100) | `15` |
@@ -224,49 +246,84 @@ jadi list-software /mnt/backup -o json
 | `--skip-windows-noise` | Skip WinSxS, Temp, Installer | off |
 | `--offline` | Skip database update check | off |
 | `--parallel-match` | Parallel database queries | off |
+| `--show-suppressed` | Include suppressed findings, marked with reason and approver | off |
+| `--ignore-suppressions` | Audit mode: disable all suppressions | off |
 | `--fail-on-severity` | Exit 2 if findings at/above severity | none |
 | `--expand` | Detail level: critical,high,medium,low,all,none | critical,high |
+
+Global options (`-d/--database`, `-c/--config`, `-v`, `-q`) work before or after the subcommand. With `-q`, stdout carries only the result.
+
+### Environment Variables
+
+| Variable | Effect |
+|----------|--------|
+| `JADI_DB` | Database path (instead of `-d`) |
+| `JADI_OFFLINE=1` | Never contact the CDN, like `--offline` |
+| `JADI_DB_URL` | HTTPS mirror for database downloads. It must serve `latest.json` unmodified |
+| `JADI_ALLOW_UNSIGNED=1` | Development mirrors only: accept a manifest without a signature, with a warning |
+
+## Database Integrity
+
+Every update must carry a valid **ed25519 signature** over the whole manifest (version, file, sizes, release time and SHA-256), verified against a public key embedded in the binary. An unsigned or invalidly signed database is refused, versions are compared numerically (a forged version cannot freeze updates), and the downloaded and decompressed sizes must match the signed manifest exactly. The database is opened read-only, and Jadi warns when it is older than the recommended age.
 
 ## Output Formats
 
 | Format | Flag | Use Case |
 |--------|------|----------|
 | Table | `-o table` | Human-readable terminal output |
-| JSON | `-o json` | Integration, automation |
+| JSON | `-o json` | Integration, automation (Trivy-compatible) |
 | SARIF | `-o sarif` | GitHub/Azure security integration |
 | CSV | `-o csv` | Spreadsheet analysis, SIEM import |
 | Markdown | `-o markdown` | Documentation, compliance reports |
 | SPDX | `-o spdx` | SBOM compliance (ISO/IEC 5962:2021) |
-| CycloneDX | `-o cyclonedx` | SBOM security (OWASP standard) |
+| CycloneDX | `-o cyclonedx` | Full inventory SBOM (OS, KBs, drivers, purls) with vulnerabilities |
 
 ### JSON Format
 
-The JSON output structure:
+The JSON output structure (abridged, from the sample scan above):
 
 ```json
 {
   "summary": {
-    "total_vulnerabilities": 78,
-    "by_severity": { "critical": 6, "high": 19, "medium": 20, "low": 3 }
+    "total_vulnerabilities": 5032,
+    "by_severity": { "critical": 221, "high": 3537, "medium": 1243, "low": 31, "unknown": 0 },
+    "kev": { "in_catalog": 49, "ransomware_associated": 3, "overdue": 47 }
   },
+  "windows_info": { "product_name": "Windows Server 2022 Standard", "current_build": "20348", "ubr": 2582 },
   "Results": [
     {
       "Vulnerabilities": [
         {
-          "VulnerabilityID": "GHSA-w24h-v9qh-8gxj",
-          "PkgName": "django",
-          "InstalledVersion": "3.2.4",
+          "VulnerabilityID": "CVE-2024-38063",
+          "Title": "Windows TCP/IP Remote Code Execution Vulnerability",
           "Severity": "CRITICAL",
-          "Title": "SQL Injection in Django",
-          "FixedVersion": "3.2.13",
           "CvssScore": 9.8,
-          "References": ["https://nvd.nist.gov/..."]
+          "CvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+          "CweIDs": ["CWE-191"],
+          "Source": "Msrc",
+          "Confidence": "High",
+          "PkgName": "Windows Server 2022 Standard",
+          "InstalledVersion": "Build 20348.2582",
+          "FixedVersion": "KB5041160",
+          "References": ["https://msrc.microsoft.com/update-guide/vulnerability/CVE-2024-38063"],
+          "KEV": { "in_catalog": false, "known_ransomware": false },
+          "Exploitation": {
+            "msrc_exploited": false,
+            "msrc_exploitability": "Exploitation More Likely",
+            "ssvc_exploitation": "poc",
+            "ssvc_automatable": true,
+            "ssvc_technical_impact": "total",
+            "epss": 0.73572,
+            "epss_percentile": 0.99475
+          }
         }
       ]
     }
   ]
 }
 ```
+
+`windows_info` is present for Windows scans. When a vulnerability has other ids (for example the GHSA of a CVE), they are listed in `VendorIDs`.
 
 ## Supported Ecosystems
 
@@ -281,42 +338,50 @@ The JSON output structure:
 | Composer | `composer.lock` |
 | RubyGems | `Gemfile.lock` |
 | Cargo | `Cargo.lock` |
-| Windows | `SOFTWARE` hive, `NTUSER.DAT` (offline registry parsing, .NET Framework detection) |
+| Windows | `SOFTWARE`, `SYSTEM` and `NTUSER.DAT` hives, kernel drivers, Store app packages |
 | JAR | `META-INF/MANIFEST.MF`, `pom.properties` |
-| Binary | Version strings (OpenSSL, Apache, nginx, PHP, MySQL, PostgreSQL, Redis) |
+| Binary | Version resources of executables in Program Files, ProgramData, PortableApps and user profiles |
 
 ## Vulnerability Sources
 
 | Source | Coverage | Description |
 |--------|----------|-------------|
-| **NVD** | 130,000+ CVEs | NIST National Vulnerability Database |
-| **OSV** | 253,000+ advisories | Open Source Vulnerabilities (Google) |
-| **GHSA** | 27,000+ advisories | GitHub Security Advisories |
-| **MSRC** | 7,600+ advisories | Microsoft Security Response Center |
-| **CISA KEV** | 1,551 CVEs | Known Exploited Vulnerabilities catalog |
+| **NVD** | 384,000+ CVEs | NIST National Vulnerability Database, every year since 1999 |
+| **OSV** | 289,000+ advisories | Open Source Vulnerabilities (8 ecosystems) |
+| **GHSA** | GitHub advisories | GitHub Security Advisories, linked to their CVEs |
+| **MSRC** | Every Patch Tuesday since 2016 | Microsoft Security Response Center, with fixed builds per release |
+| **MSRC app fixes** | 10,800+ fixes | Edge, Visual Studio, .NET, Teams and Store apps (fixes without a KB) |
+| **CISA KEV** | 1,781 CVEs | Known Exploited Vulnerabilities catalog, with ransomware association |
+| **EPSS** | 406,000+ CVEs | Exploit Prediction Scoring System (FIRST) |
+| **CISA Vulnrichment** | 219,000+ CVEs | SSVC exploitation, automatable and technical impact |
+| **MSRC exploitation** | 14,700+ entries | Exploited, Publicly Disclosed and Exploitability Index |
+| **Office release notes** | Since November 2018 | Fixed builds of Microsoft 365 Apps / Office Click-to-Run per channel |
+| **loldrivers.io** | 654 drivers | Vulnerable and malicious drivers |
+| **Driver blocklist** | 572 rules | Microsoft's vulnerable driver blocklist |
+| **endoflife.date** | 140 releases | End of support for Microsoft products |
 
-**Total: 418,000+ vulnerabilities.** Database updated daily.
+**Total: 699,000+ vulnerabilities.** Database rebuilt and signed daily.
 
 ## Configuration
 
-Jadi supports TOML configuration. Loads from: `.jadi.toml` (current dir) > `~/.config/jadi/config.toml` > `~/.jadi.toml`
+Jadi supports TOML configuration. Loads from: `.jadi.toml` (current dir) > `~/.config/jadi/config.toml` > `~/.jadi.toml`. The loaded file and the number of active suppressions are logged.
 
 ### Vulnerability Suppressions
 
 ```toml
 [[suppress]]
 cve = "CVE-2023-12345"
-reason = "False positive — component not reachable"
+reason = "False positive: component not reachable"
 expires = "2026-12-31"
 
 [[suppress]]
 package = "lodash"
-reason = "Accepted risk — internal tool only"
+reason = "Accepted risk: internal tool only"
 expires = "2026-06-30"
 
 [[suppress]]
 path = "test/**/*"
-reason = "Test fixtures — not deployed"
+reason = "Test fixtures: not deployed"
 ```
 
 Audit mode (disable all suppressions): `jadi scan /mnt/backup --ignore-suppressions`
@@ -325,9 +390,9 @@ Audit mode (disable all suppressions): `jadi scan /mnt/backup --ignore-suppressi
 
 Scanning a Windows Server 2022 backup (mounted VMDK from Veeam):
 
-![Scan progress — system detection, role identification, ecosystem scanners](docs/images/jadi-scan.png)
+![Scan progress: system detection, role identification, ecosystem scanners](docs/images/jadi-scan.png)
 
-![Results — vulnerability breakdown, source summary, KEV alerts, recommended actions](docs/images/jadi-results.png)
+![Results: vulnerability breakdown, source summary, KEV alerts, recommended actions](docs/images/jadi-results.png)
 
 ## Support & Contributing
 
@@ -339,4 +404,4 @@ We welcome feedback, bug reports, and feature suggestions from the community.
 
 ## License
 
-MIT — see [LICENSE](LICENSE) for details.
+MIT: see [LICENSE](LICENSE) for details.
